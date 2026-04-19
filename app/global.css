@@ -1,0 +1,12 @@
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-rgb: 255, 255, 255;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  padding: 40px; /* Gives your Command Center some breathing room */
+  max-width: 1200px;
+  margin: 0 auto;
+}

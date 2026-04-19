@@ -1,10 +1,17 @@
 {
   "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
   "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
     "@google-cloud/vertexai": "^1.12.0",
     "@google/genai": "^1.50.1",
     "@mendable/firecrawl-js": "^4.18.3",
-    "dotenv": "^17.4.2",
-    "firecrawl": "^4.18.3"
+    "dotenv": "^17.4.2"
   }
 }

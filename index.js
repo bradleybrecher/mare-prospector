@@ -1,7 +1,7 @@
 import fs from 'fs';
 import 'dotenv/config';
-import { auditSalon } from './src/auditSalon.js';
-import { discoverSalons } from './src/discoverSalons.js';
+import { auditSalon } from './app/lib/auditSalon.js';
+import { discoverSalons } from './app/lib/discoverSalons.js';
 
 // 1. The Autonomous Execution Loop
 (async () => {
