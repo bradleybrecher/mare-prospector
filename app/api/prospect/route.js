@@ -4,25 +4,27 @@ import { NextResponse } from 'next/server';
 
 export async function POST(req) {
   try {
-    const { city, state } = await req.json();
-    const query = `expensive luxury hair salons in ${city} ${state}`;
+    const { location, state } = await req.json();
+    const query = `expensive luxury hair salons in ${location} ${state}`;
 
-    // Step 1: Discover URLs
-    const discoveredUrls = await discoverSalons(query, 7);
+    // Step 1: Discover URLs (Limited to 4 for faster live demo performance)
+    const discoveredUrls = await discoverSalons(query, 4);
 
-    const finalLeads = [];
-    // Step 2: Sequential Audit
-    for (const url of discoveredUrls) {
+    // Step 2: Parallel Audit
+    const auditPromises = discoveredUrls.map(async (url) => {
       const isJunk = ["yelp", "instagram", "facebook", "modernluxury", "timeout", "expertise"].some(j => url.includes(j));
-      
       if (!isJunk) {
         const report = await auditSalon(url);
         // Apply strict MaRe Scale-Up thresholds
-        if (report && report.prestige_index >= 70 && report.revenue_verified_1M) {
-          finalLeads.push(report);
+        if (report && report.prestige_index >= 70) {
+          return report;
         }
       }
-    }
+      return null;
+    });
+
+    const results = await Promise.all(auditPromises);
+    const finalLeads = results.filter(lead => lead !== null);
 
     return NextResponse.json(finalLeads);
   } catch (error) {

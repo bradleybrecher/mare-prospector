@@ -12,49 +12,96 @@ const US_STATES = [
   "Wisconsin", "Wyoming"
 ];
 
-// Mock Intelligence Data
-const DETECTED_SPAS = [
-  { name: "Aethel Wellness Lab", tech: "Hyperbaric / DNA-Tailored", status: "Market Leader" },
-  { name: "Neon Soma Center", tech: "Robotic Massage / Red Light", status: "Emerging" },
-  { name: "The Drift Bathhouse", tech: "Communal Bio-Thermal", status: "Established" }
-];
-
 export default function Page() {
   const [isDeploying, setIsDeploying] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [formData, setFormData] = useState({ location: "", state: "" });
+  const [leads, setLeads] = useState([]);
 
-  const handleDeploy = () => {
+  const handleDeploy = async () => {
     if (!formData.location || !formData.state) {
-      alert("Initialization failed: Provide geographic focus data.");
+      alert("Initialization failed: Please provide geographic focus data.");
       return;
     }
     
     setIsDeploying(true);
     setShowResults(false);
     
-    // Simulated Processing Time for "Radar Sweep"
-    setTimeout(() => {
-      setIsDeploying(false);
+    try {
+      const res = await fetch('/api/prospect', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      const data = await res.json();
+      setLeads(data);
       setShowResults(true);
-    }, 3500);
+    } catch (error) {
+      console.error("Failed to fetch leads", error);
+      alert("Radar malfunction. Ensure API keys are set in your .env file.");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
+
+  // --- NEW EXPORT FUNCTION ---
+  const exportToCSV = () => {
+    if (leads.length === 0) return;
+
+    // Define the columns we want in our CSV
+    const headers = [
+      "Salon Name", "URL", "Email", "Phone", "Prestige Score", 
+      "1M+ Verified", "Infrastructure", "Upsell Potential", 
+      "Outreach Script", "Content Hook", "Content Concept"
+    ];
+
+    // Map the lead data to the corresponding columns
+    const csvRows = leads.map(lead => {
+      return [
+        `"${lead.salon_name || ''}"`,
+        `"${lead.url || ''}"`,
+        `"${lead.contact_email || ''}"`,
+        `"${lead.contact_phone || ''}"`,
+        `"${lead.prestige_index || ''}"`,
+        `"${lead.revenue_verified_1M ? 'Yes' : 'No'}"`,
+        `"${lead.infrastructure_viability || ''}"`,
+        `"${lead.incentive_calculator?.upsell_potential || ''}"`,
+        `"${lead.bespoke_outreach_script || ''}"`,
+        `"${lead.creative_director_assets?.[0]?.hook || ''}"`,
+        `"${lead.creative_director_assets?.[0]?.concept || ''}"`
+      ].join(',');
+    });
+
+    // Combine headers and rows
+    const csvContent = [headers.join(','), ...csvRows].join('\n');
+    
+    // Create a Blob and trigger a download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `MaRe_Leads_${formData.location.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   return (
     <div className="container">
       <header>
         <h1>MaRe Command Center</h1>
-        <p className="subtitle">Strategic Growth Catalyst | Pulse Miami</p>
+        <p className="subtitle">Global Prospector & Content Engine</p>
       </header>
 
       {!showResults ? (
         <div className="input-group">
           <div className="field">
-            <label htmlFor="location">Geographic Focus</label>
+            <label htmlFor="location">Target Proximity</label>
             <input 
               type="text" 
               id="location"
-              placeholder="City, County, or Zip Code" 
+              placeholder="e.g., Beverly Hills, SoHo, Brickell" 
               disabled={isDeploying}
               value={formData.location}
               onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -82,18 +129,17 @@ export default function Page() {
             onClick={handleDeploy}
             disabled={isDeploying}
           >
-            {isDeploying ? "Scanning Market..." : "Deploy Radar"}
+            {isDeploying ? "Synthesizing Data..." : "Run Growth Catalyst"}
           </button>
 
           {isDeploying && (
             <div className="status-console">
-              <div className="scanner-line"></div>
-              <p className="pulse-text">UPLINK ESTABLISHED...</p>
+              <p className="pulse-text">Initiating MaRe Eye Protocol...</p>
               <p className="pulse-text" style={{ animationDelay: '0.5s' }}>
-                SCRAPING PROXIMITY DATA FOR {formData.location.toUpperCase()}...
+                Scanning luxury domains in {formData.location}...
               </p>
               <p className="pulse-text" style={{ animationDelay: '1.2s' }}>
-                IDENTIFYING SECTOR DISRUPTORS...
+                Auditing facility infrastructure & $1M+ revenue markers...
               </p>
             </div>
           )}
@@ -101,65 +147,82 @@ export default function Page() {
       ) : (
         <div className="results-area">
           <div className="result-header">
-            <h3>RADAR RESULTS: {formData.location.toUpperCase()}, {formData.state.toUpperCase()}</h3>
-            <span className="status-tag">Live Feed</span>
-          </div>
-          
-          <div className="stats-grid">
-            <div className="stat-card">
-              <label>Growth Potential</label>
-              <div className="value">88%</div>
-              <div className="mini-bar">
-                <div className="fill" style={{ width: '88%' }}></div>
-              </div>
-            </div>
-            <div className="stat-card">
-              <label>Market Saturation</label>
-              <div className="value">Low</div>
-              <div className="mini-bar">
-                <div className="fill" style={{ width: '22%', background: '#22c55e' }}></div>
-              </div>
-            </div>
+            <h3>Radar Results: {formData.location}</h3>
+            <span className="status-tag">{leads.length} Target(s) Acquired</span>
           </div>
 
-          {/* New: Detected Spas Section */}
           <section className="data-section">
-            <h4>Detected Establishments</h4>
             <div className="spa-list">
-              {DETECTED_SPAS.map((spa, i) => (
-                <div key={i} className="spa-card">
-                  <div className="spa-info">
-                    <strong>{spa.name}</strong>
-                    <span>{spa.tech}</span>
+              {leads.length === 0 ? (
+                <p style={{color: '#71717a'}}>No salons met the strict MaRe luxury criteria in this sector.</p>
+              ) : leads.map((lead, i) => (
+                <div key={i} className="lead-card">
+                  <div className="lead-header">
+                    <div className="header-title-group">
+                      <h4>{lead.salon_name || "Unverified Luxury Entity"}</h4>
+                      <a href={lead.url} target="_blank" rel="noopener noreferrer" className="lead-url">
+                        {lead.url}
+                      </a>
+                    </div>
+                    <span className="prestige-score">Score: {lead.prestige_index}/100</span>
                   </div>
-                  <span className="spa-status">{spa.status}</span>
+
+                  {(lead.contact_email || lead.contact_phone) && (
+                    <div className="lead-contact">
+                      {lead.contact_email && <span>📧 {lead.contact_email}</span>}
+                      {lead.contact_phone && <span>📞 {lead.contact_phone}</span>}
+                    </div>
+                  )}
+                  
+                  <div className="lead-metrics">
+                    <span className={lead.revenue_verified_1M ? "metric pass" : "metric"}>
+                      {lead.revenue_verified_1M ? "$1M+ Verified" : "Revenue Unverified"}
+                    </span>
+                    <span className="metric">Infra: {lead.infrastructure_viability}</span>
+                    <span className="metric">AI Reach: {lead.ai_search_dominance}</span>
+                  </div>
+
+                  <div className="lead-content">
+                    <p><strong>Revenue Logic:</strong> {lead.revenue_reasoning}</p>
+
+                    <div className="incentive-box">
+                      <strong>📈 Incentive Calculator</strong>
+                      <p><em>Upsell Potential:</em> {lead.incentive_calculator?.upsell_potential}</p>
+                      <p><em>Est. ROI Timeline:</em> {lead.incentive_calculator?.roi_timeline}</p>
+                    </div>
+                    
+                    <div className="outreach-box">
+                    <div className="outreach-header">
+                        <strong>Human-in-the-Loop Outreach Draft</strong>
+                        <a 
+                        href={`mailto:${lead.contact_email || ''}?subject=${encodeURIComponent("Elevating the Head Spa Experience at " + (lead.salon_name || "Your Salon"))}&body=${encodeURIComponent(lead.bespoke_outreach_script)}`} 
+                        className="email-draft-btn"
+                        >
+                        ✉️ Open in Email
+                        </a>
+                    </div>
+                    <p>"{lead.bespoke_outreach_script}"</p>
+                    </div>
+                    <div className="content-engine-box">
+                      <strong>Content Engine Asset</strong>
+                      <p><em>Hook:</em> {lead.creative_director_assets?.[0]?.hook}</p>
+                      <p><em>Concept:</em> {lead.creative_director_assets?.[0]?.concept}</p>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           </section>
 
-          {/* New: Strategic Next Steps Section */}
-          <section className="data-section">
-            <h4>Strategic Roadmap</h4>
-            <ul className="steps-list">
-              <li>
-                <strong>01 Site Scoring</strong>
-                Conduct a 10-year yield analysis on parcel accessibility within {formData.location}.
-              </li>
-              <li>
-                <strong>02 Tech Integration</strong>
-                Scope "Aescape" robotic systems to offset {formData.state}'s rising labor costs.
-              </li>
-              <li>
-                <strong>03 Zoning Audit</strong>
-                Validate {formData.state} Class-B commercial zoning for longevity-focused clinical use.
-              </li>
-            </ul>
-          </section>
-
-          <button className="reset-btn" onClick={() => setShowResults(false)}>
-            Initialize New Scan
-          </button>
+          {/* NEW ACTION BUTTONS */}
+          <div className="action-buttons">
+            <button className="export-btn" onClick={exportToCSV} disabled={leads.length === 0}>
+              📥 Export to CSV
+            </button>
+            <button className="reset-btn" onClick={() => setShowResults(false)}>
+              Initialize New Scan
+            </button>
+          </div>
         </div>
       )}
     </div>

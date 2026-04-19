@@ -8,16 +8,25 @@ export async function auditSalon(url) {
             formats: ['markdown'],
             onlyMainContent: true
         });
+        
         if (!scrapeResult || scrapeResult.success === false) {
-            throw new Error("Firecrawl returned empty data. The site might be blocking scrapers.");
+            console.log(`⚠️ Firecrawl failed for ${url}`);
+            return null;
         }
+
         const prompt = auditPrompt.replace('{{DATA}}', scrapeResult.markdown.substring(0, 15000));
+        
         const response = await ai.models.generateContent({
             model: 'gemini-2.5-flash',
             contents: prompt,
             config: { responseMimeType: 'application/json' }
         });
-        const analysis = JSON.parse(response.text);
+
+        // Clean up potential markdown formatting from Gemini
+        let rawText = response.text;
+        rawText = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        
+        const analysis = JSON.parse(rawText);
         return { url, ...analysis };
     } catch (error) {
         console.error(`❌ Error at ${url}:`, error.message);
