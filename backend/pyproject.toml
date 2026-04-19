@@ -1,0 +1,47 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mare"
+version = "0.1.0"
+description = "MaRe Head Spa growth engine — luxury outreach + high-volume content synthesis."
+requires-python = ">=3.11"
+authors = [{ name = "MaRe" }]
+dependencies = [
+    # Official Google Gen AI SDK (supersedes google-generativeai)
+    "google-genai>=1.0.0",
+    "python-dotenv>=1.0.1",
+    "pydantic>=2.7",
+    "typer>=0.12",
+    "rich>=13.7",
+    # Stateful HITL workflows: durable draft → review → revise → approve → publish.
+    "langgraph>=0.2.50",
+    "langgraph-checkpoint-sqlite>=2.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.5",
+    "mypy>=1.10",
+]
+
+[project.scripts]
+mare = "mare.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
