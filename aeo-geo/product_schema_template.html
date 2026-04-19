@@ -1,0 +1,203 @@
+<!--
+  MaRe x Philip Martin's — Product Schema Template
+  ================================================
+
+  Shopify auto-generates basic Product schema for each product page.
+  That baseline covers name, price, image, and availability — which is
+  table stakes. It does not cover what makes a MaRe product different
+  from a generic hair-care product.
+
+  This template adds:
+
+    - brand: Philip Martin's (the manufacturer)
+    - additionalProperty: volume, country of origin, ingredients class
+    - category: mapped to Google's product taxonomy
+    - offers: explicit pricing with currency
+    - aggregateRating placeholder (optional, only if real reviews exist)
+
+  -----------------------------------------------------------------------
+  HOW TO USE
+  -----------------------------------------------------------------------
+
+  On Shopify, this goes in product.liquid, inside the <head> block or
+  just before </body>. It should APPEND to the Shopify default schema
+  (or replace it, if the theme allows; check first).
+
+  The worked example below uses "3 Ways" (a real MaRe x Philip Martin's
+  product). Duplicate the pattern for each product, changing the
+  per-product fields.
+
+  -----------------------------------------------------------------------
+  REPLACE MARKERS
+  -----------------------------------------------------------------------
+
+  Per product, fill in:
+    REPLACE_PRODUCT_NAME            e.g. "3 Ways"
+    REPLACE_PRODUCT_SLUG            e.g. "3-ways"
+    REPLACE_PRODUCT_DESCRIPTION     1-3 sentence description
+    REPLACE_IMAGE_URL               CDN URL of the primary product image
+    REPLACE_PRICE                   decimal, e.g. "63.00"
+    REPLACE_SKU                     if available
+    REPLACE_VOLUME_ML               if applicable, e.g. "150"
+    REPLACE_CATEGORY                Google taxonomy code; see below
+
+  Google product category IDs (pick closest):
+    469   Health & Beauty > Personal Care > Cosmetics > Skin Care
+    5975  Health & Beauty > Personal Care > Hair Care
+    6048  Health & Beauty > Personal Care > Hair Care > Shampoo & Conditioner
+    8466  Health & Beauty > Personal Care > Hair Care > Hair Oils
+    2915  Health & Beauty > Personal Care > Hair Care > Hair Styling Products
+
+  For Philip Martin's cosmetics, 5975 or its sub-categories are usually right.
+
+  -----------------------------------------------------------------------
+
+-->
+
+<!-- ============================================================= -->
+<!-- WORKED EXAMPLE: "3 Ways" (real MaRe x Philip Martin's product) -->
+<!-- ============================================================= -->
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "@id": "https://mareheadspa.com/products/3-ways#product",
+  "name": "3 Ways",
+  "description": "A versatile Philip Martin's formulation, used in MaRe Head Spa rituals and in the take-home routines selected from each client's MaRe Eye diagnostic report.",
+  "image": [
+    "https://mareheadspa.com/cdn/shop/files/3_Ways_150ml.png"
+  ],
+  "url": "https://mareheadspa.com/products/3-ways",
+  "sku": "REPLACE_SKU",
+  "brand": {
+    "@type": "Brand",
+    "name": "Philip Martin's",
+    "description": "Italian biodynamic luxury haircare. MaRe is the exclusive U.S. partner."
+  },
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "Philip Martin's",
+    "url": "https://www.philipmartins.it",
+    "address": {
+      "@type": "PostalAddress",
+      "addressCountry": "IT"
+    }
+  },
+  "category": "Health & Beauty > Personal Care > Hair Care",
+  "countryOfOrigin": {
+    "@type": "Country",
+    "name": "Italy"
+  },
+  "additionalProperty": [
+    {
+      "@type": "PropertyValue",
+      "name": "Volume",
+      "value": "150",
+      "unitCode": "MLT"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Ingredient Class",
+      "value": "Biodynamic / Organic"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Formulation Style",
+      "value": "Italian luxury"
+    },
+    {
+      "@type": "PropertyValue",
+      "name": "Used in",
+      "value": "MaRe Head Spa System protocols"
+    }
+  ],
+  "offers": {
+    "@type": "Offer",
+    "url": "https://mareheadspa.com/products/3-ways",
+    "priceCurrency": "USD",
+    "price": "63.00",
+    "priceValidUntil": "2026-12-31",
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": {
+      "@id": "https://mareheadspa.com/#organization"
+    }
+  },
+  "isRelatedTo": {
+    "@id": "https://mareheadspa.com/#organization"
+  }
+}
+</script>
+
+<!-- ============================================================= -->
+<!-- TEMPLATE VERSION: duplicate per product, swap placeholders     -->
+<!-- ============================================================= -->
+
+<!--
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "@id": "https://mareheadspa.com/products/REPLACE_PRODUCT_SLUG#product",
+  "name": "REPLACE_PRODUCT_NAME",
+  "description": "REPLACE_PRODUCT_DESCRIPTION",
+  "image": ["REPLACE_IMAGE_URL"],
+  "url": "https://mareheadspa.com/products/REPLACE_PRODUCT_SLUG",
+  "sku": "REPLACE_SKU",
+  "brand": {
+    "@type": "Brand",
+    "name": "Philip Martin's",
+    "description": "Italian biodynamic luxury haircare. MaRe is the exclusive U.S. partner."
+  },
+  "manufacturer": {
+    "@type": "Organization",
+    "name": "Philip Martin's",
+    "url": "https://www.philipmartins.it",
+    "address": { "@type": "PostalAddress", "addressCountry": "IT" }
+  },
+  "category": "Health & Beauty > Personal Care > Hair Care",
+  "countryOfOrigin": { "@type": "Country", "name": "Italy" },
+  "additionalProperty": [
+    { "@type": "PropertyValue", "name": "Volume",
+      "value": "REPLACE_VOLUME_ML", "unitCode": "MLT" },
+    { "@type": "PropertyValue", "name": "Ingredient Class",
+      "value": "Biodynamic / Organic" },
+    { "@type": "PropertyValue", "name": "Formulation Style",
+      "value": "Italian luxury" },
+    { "@type": "PropertyValue", "name": "Used in",
+      "value": "MaRe Head Spa System protocols" }
+  ],
+  "offers": {
+    "@type": "Offer",
+    "url": "https://mareheadspa.com/products/REPLACE_PRODUCT_SLUG",
+    "priceCurrency": "USD",
+    "price": "REPLACE_PRICE",
+    "availability": "https://schema.org/InStock",
+    "itemCondition": "https://schema.org/NewCondition",
+    "seller": { "@id": "https://mareheadspa.com/#organization" }
+  },
+  "isRelatedTo": { "@id": "https://mareheadspa.com/#organization" }
+}
+</script>
+-->
+
+<!--
+  NOTE ON AGGREGATERATING
+  -----------------------
+  If MaRe collects genuine product reviews (Shopify Reviews app, Judge.me,
+  Yotpo, etc.), add an aggregateRating block inside the Product entity:
+
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.7",
+      "reviewCount": "23"
+    }
+
+  Do NOT fake review counts. Google's Rich Results team is aggressive about
+  de-indexing pages with invented review data, and inaccurate ratings can
+  trigger manual review penalties on the whole domain.
+
+  If no review system is in place yet, leave AggregateRating out. The
+  Product schema is still useful and fully valid without it.
+-->
