@@ -17,6 +17,7 @@ export default function Page() {
   const [showResults, setShowResults] = useState(false);
   const [formData, setFormData] = useState({ location: "", state: "" });
   const [leads, setLeads] = useState([]);
+  const [apiError, setApiError] = useState("");
 
   const handleDeploy = async () => {
     if (!formData.location || !formData.state) {
@@ -26,6 +27,7 @@ export default function Page() {
     
     setIsDeploying(true);
     setShowResults(false);
+    setApiError("");
     
     try {
       const res = await fetch('/api/prospect', {
@@ -34,32 +36,39 @@ export default function Page() {
         body: JSON.stringify(formData)
       });
       
-      const data = await res.json();
-      setLeads(data);
+      const payload = await res.json();
+
+      if (!payload || !Array.isArray(payload.results)) {
+        throw new Error(payload?.message || "Unexpected response from prospect API.");
+      }
+      
+      setLeads(payload.results);
+      setApiError(payload.error || "");
       setShowResults(true);
     } catch (error) {
       console.error("Failed to fetch leads", error);
-      alert("Radar malfunction. Ensure API keys are set in your .env file.");
+      alert(`Radar malfunction: ${error.message}`);
+      setLeads([]);
+      setApiError(error.message);
     } finally {
       setIsDeploying(false);
     }
   };
 
-  // --- NEW EXPORT FUNCTION ---
   const exportToCSV = () => {
     if (leads.length === 0) return;
 
-    // Define the columns we want in our CSV
     const headers = [
-      "Salon Name", "URL", "Email", "Phone", "Prestige Score", 
+      "Salon Name", "Location", "State", "URL", "Email", "Phone", "Prestige Score", 
       "1M+ Verified", "Infrastructure", "Upsell Potential", 
       "Outreach Script", "Content Hook", "Content Concept"
     ];
 
-    // Map the lead data to the corresponding columns
     const csvRows = leads.map(lead => {
       return [
         `"${lead.salon_name || ''}"`,
+        `"${lead.search_location || formData.location || ''}"`,
+        `"${lead.search_state || formData.state || ''}"`,
         `"${lead.url || ''}"`,
         `"${lead.contact_email || ''}"`,
         `"${lead.contact_phone || ''}"`,
@@ -73,15 +82,12 @@ export default function Page() {
       ].join(',');
     });
 
-    // Combine headers and rows
     const csvContent = [headers.join(','), ...csvRows].join('\n');
-    
-    // Create a Blob and trigger a download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `MaRe_Leads_${formData.location.replace(/\s+/g, '_')}.csv`);
+    link.setAttribute("download", `MaRe_Leads_${formData.location.replace(/\s+/g, '_')}_${formData.state}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -113,7 +119,7 @@ export default function Page() {
             <select 
               id="state"
               className="state-dropdown" 
-              defaultValue="" 
+              value={formData.state}
               disabled={isDeploying}
               onChange={(e) => setFormData({ ...formData, state: e.target.value })}
             >
@@ -136,7 +142,7 @@ export default function Page() {
             <div className="status-console">
               <p className="pulse-text">Initiating MaRe Eye Protocol...</p>
               <p className="pulse-text" style={{ animationDelay: '0.5s' }}>
-                Scanning luxury domains in {formData.location}...
+                Scanning luxury domains in {formData.location}, {formData.state}...
               </p>
               <p className="pulse-text" style={{ animationDelay: '1.2s' }}>
                 Auditing facility infrastructure & $1M+ revenue markers...
@@ -147,12 +153,17 @@ export default function Page() {
       ) : (
         <div className="results-area">
           <div className="result-header">
-            <h3>Radar Results: {formData.location}</h3>
+            <h3>Radar Results: {formData.location}, {formData.state}</h3>
             <span className="status-tag">{leads.length} Target(s) Acquired</span>
           </div>
 
           <section className="data-section">
             <div className="spa-list">
+              {apiError && (
+                <p style={{ color: '#9f1239', marginBottom: '16px' }}>
+                  {apiError}
+                </p>
+              )}
               {leads.length === 0 ? (
                 <p style={{color: '#71717a'}}>No salons met the strict MaRe luxury criteria in this sector.</p>
               ) : leads.map((lead, i) => (
@@ -178,6 +189,7 @@ export default function Page() {
                     <span className={lead.revenue_verified_1M ? "metric pass" : "metric"}>
                       {lead.revenue_verified_1M ? "$1M+ Verified" : "Revenue Unverified"}
                     </span>
+                    <span className="metric">State: {lead.search_state || formData.state}</span>
                     <span className="metric">Infra: {lead.infrastructure_viability}</span>
                     <span className="metric">AI Reach: {lead.ai_search_dominance}</span>
                   </div>
@@ -192,17 +204,18 @@ export default function Page() {
                     </div>
                     
                     <div className="outreach-box">
-                    <div className="outreach-header">
+                      <div className="outreach-header">
                         <strong>Human-in-the-Loop Outreach Draft</strong>
                         <a 
-                        href={`mailto:${lead.contact_email || ''}?subject=${encodeURIComponent("Elevating the Head Spa Experience at " + (lead.salon_name || "Your Salon"))}&body=${encodeURIComponent(lead.bespoke_outreach_script)}`} 
-                        className="email-draft-btn"
+                          href={`mailto:${lead.contact_email || ''}?subject=${encodeURIComponent("Elevating the Head Spa Experience at " + (lead.salon_name || "Your Salon"))}&body=${encodeURIComponent(lead.bespoke_outreach_script)}`} 
+                          className="email-draft-btn"
                         >
-                        ✉️ Open in Email
+                          ✉️ Open in Email
                         </a>
+                      </div>
+                      <p>"{lead.bespoke_outreach_script}"</p>
                     </div>
-                    <p>"{lead.bespoke_outreach_script}"</p>
-                    </div>
+
                     <div className="content-engine-box">
                       <strong>Content Engine Asset</strong>
                       <p><em>Hook:</em> {lead.creative_director_assets?.[0]?.hook}</p>
@@ -214,7 +227,6 @@ export default function Page() {
             </div>
           </section>
 
-          {/* NEW ACTION BUTTONS */}
           <div className="action-buttons">
             <button className="export-btn" onClick={exportToCSV} disabled={leads.length === 0}>
               📥 Export to CSV

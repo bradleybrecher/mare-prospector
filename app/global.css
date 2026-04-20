@@ -423,3 +423,49 @@ input:focus, select:focus {
   color: var(--clear-white);
   transform: translateY(-1px);
 }
+
+:root {
+  --mare-light: #e2e2de;
+  --mare-key: #296167;
+  --mare-dark: #2A2420;
+  --mare-brown: #653D24;
+  --mare-water: #e4eced;
+}
+
+body {
+  background-color: var(--mare-water);
+  color: var(--mare-dark);
+  font-family: 'Manrope', sans-serif; /* Body Typography [cite: 50, 54] */
+}
+
+h1, h2, h3, h4 {
+  font-family: 'Playfair Display', serif; /* Principal Typography [cite: 43, 47] */
+  color: var(--mare-key);
+}
+
+.container {
+  background: white;
+  border: 1px solid var(--mare-light);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+  border-radius: 8px;
+  padding: 40px;
+}
+
+.deploy-btn {
+  background-color: var(--mare-key);
+  color: white;
+  font-weight: 600;
+  border-radius: 4px;
+  transition: 0.3s;
+}
+
+.deploy-btn:hover {
+  background-color: var(--mare-dark);
+}
+
+.incentive-box {
+  border-left: 4px solid #22c55e;
+  background: #f0fdf4;
+  padding: 15px;
+  margin: 10px 0;
+}
