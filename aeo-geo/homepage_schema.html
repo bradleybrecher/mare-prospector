@@ -1,0 +1,205 @@
+<!--
+  MaRe Head Spa System — Global Schema Block
+  ==========================================
+
+  This single <script> block defines the core entities for mareheadspa.com
+  and should appear in the <head> of EVERY page on the site.
+
+  On Shopify, paste the entire <script>...</script> block (below) into
+  theme.liquid inside the <head> element, above the closing </head> tag.
+
+  The block defines three linked entities:
+
+    - Organization (the brand MaRe Head Spa System)
+    - LocalBusiness / HairSalon (the physical Miami flagship)
+    - WebSite (the site itself, with a SearchAction)
+
+  They are linked via @id references so Google understands they're
+  facets of the same business.
+
+  -----------------------------------------------------------------------
+  REPLACE MARKERS
+  -----------------------------------------------------------------------
+
+  Search for "REPLACE:" in the block below and fill in every one.
+  The placeholders are deliberately obvious so nothing ships with
+  dummy data.
+
+  Required before deploy:
+    REPLACE_STREET_ADDRESS           e.g. "123 NE 41st St"
+    REPLACE_CITY                     e.g. "Miami"
+    REPLACE_REGION                   e.g. "FL"
+    REPLACE_POSTAL_CODE              e.g. "33137"
+    REPLACE_LATITUDE                 decimal, e.g. 25.8133
+    REPLACE_LONGITUDE                decimal, e.g. -80.1925
+    REPLACE_OPENING_HOURS            see example in block
+
+  Optional but recommended:
+    REPLACE_FOUNDING_DATE            e.g. "2024-01-01" if known, else delete the line
+    REPLACE_LEGAL_NAME               e.g. "MaRe Head Spa LLC" if different from brand; else delete
+    REPLACE_PRICE_RANGE              e.g. "$$$" (one to four $; $$$ = upscale)
+
+  -----------------------------------------------------------------------
+  AFTER DEPLOY
+  -----------------------------------------------------------------------
+
+  1. Run the homepage through search.google.com/test/rich-results
+  2. Expect to see: Organization + LocalBusiness detected, no critical errors
+  3. If "errors" appear for missing optional fields, safe to ignore
+
+-->
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+
+    {
+      "@type": "Organization",
+      "@id": "https://mareheadspa.com/#organization",
+      "name": "MaRe Head Spa System",
+      "legalName": "REPLACE_LEGAL_NAME",
+      "url": "https://mareheadspa.com",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://mareheadspa.com/cdn/shop/files/logo.svg",
+        "width": 512,
+        "height": 512
+      },
+      "description": "A luxury head spa system combining AI-powered scalp diagnostics, standardized ritual protocols, and Italian biodynamic formulations from Philip Martin's.",
+      "slogan": "Your Head. Your Way. Science Supported.",
+      "foundingDate": "REPLACE_FOUNDING_DATE",
+      "founder": [
+        {
+          "@type": "Person",
+          "name": "Rebecca Fishman",
+          "jobTitle": "Co-Founder"
+        },
+        {
+          "@type": "Person",
+          "name": "Marianna Stiglitz",
+          "jobTitle": "Co-Founder"
+        }
+      ],
+      "sameAs": [
+        "https://www.instagram.com/mareheadspa/",
+        "https://www.linkedin.com/company/mare-head-spa-system/"
+      ],
+      "contactPoint": [
+        {
+          "@type": "ContactPoint",
+          "telephone": "+1-305-915-0530",
+          "email": "info@mareheadspa.com",
+          "contactType": "customer service",
+          "areaServed": "US",
+          "availableLanguage": ["English"]
+        }
+      ],
+      "knowsAbout": [
+        "head spa",
+        "scalp health",
+        "scalp analysis",
+        "AI scalp diagnostics",
+        "luxury hair care",
+        "Philip Martin's haircare",
+        "biodynamic hair care",
+        "scalp treatment",
+        "head wellness",
+        "cognitive wellness"
+      ]
+    },
+
+    {
+      "@type": ["LocalBusiness", "HairSalon"],
+      "@id": "https://mareheadspa.com/#flagship",
+      "name": "MaRe Head Spa System — Miami Flagship",
+      "parentOrganization": { "@id": "https://mareheadspa.com/#organization" },
+      "url": "https://mareheadspa.com/pages/find-a-location",
+      "telephone": "+1-305-915-0530",
+      "email": "info@mareheadspa.com",
+      "image": "https://mareheadspa.com/cdn/shop/files/logo.svg",
+      "priceRange": "REPLACE_PRICE_RANGE",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "REPLACE_STREET_ADDRESS",
+        "addressLocality": "REPLACE_CITY",
+        "addressRegion": "REPLACE_REGION",
+        "postalCode": "REPLACE_POSTAL_CODE",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": "REPLACE_LATITUDE",
+        "longitude": "REPLACE_LONGITUDE"
+      },
+      "openingHoursSpecification": [
+        {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": [
+            "Monday",
+            "Tuesday",
+            "Wednesday",
+            "Thursday",
+            "Friday",
+            "Saturday"
+          ],
+          "opens": "REPLACE_OPENING_HOURS_e.g._10:00",
+          "closes": "REPLACE_CLOSING_HOURS_e.g._19:00"
+        }
+      ],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "MaRe Head Spa Rituals",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "MaRe Express Ritual",
+              "description": "35-minute head spa ritual with MaRe Eye scalp analysis and Philip Martin's biodynamic protocol."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "MaRe Signature Ritual",
+              "description": "60-minute head spa ritual with MaRe Eye scalp analysis and Philip Martin's biodynamic protocol."
+            }
+          },
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "MaRe Deep Ritual",
+              "description": "90-minute head spa ritual with MaRe Eye scalp analysis and Philip Martin's biodynamic protocol."
+            }
+          }
+        ]
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Miami"
+      }
+    },
+
+    {
+      "@type": "WebSite",
+      "@id": "https://mareheadspa.com/#website",
+      "url": "https://mareheadspa.com",
+      "name": "MaRe Head Spa System",
+      "publisher": { "@id": "https://mareheadspa.com/#organization" },
+      "inLanguage": "en-US",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {
+          "@type": "EntryPoint",
+          "urlTemplate": "https://mareheadspa.com/search?q={search_term_string}"
+        },
+        "query-input": "required name=search_term_string"
+      }
+    }
+
+  ]
+}
+</script>
