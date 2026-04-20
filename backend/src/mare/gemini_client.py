@@ -34,19 +34,99 @@ class GenerationResult:
 class GeminiClient:
     """Brand-aware Gemini client.
 
+    Two routing modes, same ergonomics:
+
+    - **AI Studio (default)** — uses `GEMINI_API_KEY`. Quick to start, but
+      free-tier caps (0 Pro/day, 20 Flash/day, 0 paid Imagen) quickly bite
+      at production volume.
+    - **Vertex AI** — uses Google Cloud Application Default Credentials
+      and a project/location. No free-tier caps; you pay GCP prices.
+
     Usage:
+        # AI Studio
         client = GeminiClient.from_env()
-        result = client.generate("Write a one-line tagline for a head spa.")
-        print(result.text)
+
+        # Vertex — if VERTEX_PROJECT is set in .env
+        client = GeminiClient.from_vertex_env()
+
+        # Vertex — explicit
+        client = GeminiClient.from_vertex(project="my-gcp-proj", location="us-central1")
     """
 
-    def __init__(self, settings: Settings):
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        vertex: bool = False,
+        vertex_project: str | None = None,
+        vertex_location: str | None = None,
+    ):
         self._settings = settings
-        self._client = genai.Client(api_key=settings.gemini_api_key)
+        self._is_vertex = vertex
+        if vertex:
+            # Vertex routing uses ADC, not the API key.
+            self._client = genai.Client(
+                vertexai=True,
+                project=vertex_project or settings.vertex_project,
+                location=vertex_location or settings.vertex_location,
+            )
+        else:
+            self._client = genai.Client(api_key=settings.gemini_api_key)
 
     @classmethod
     def from_env(cls) -> "GeminiClient":
+        """Build an AI Studio client from .env (the default path)."""
         return cls(Settings.load())
+
+    @classmethod
+    def from_vertex_env(cls) -> "GeminiClient":
+        """Build a Vertex-routed client from .env.
+
+        Requires VERTEX_PROJECT (and, optionally, VERTEX_LOCATION — defaults
+        to `us-central1`). Raises a clear error if unset.
+        """
+        settings = Settings.load()
+        settings.require_vertex(purpose="this Gemini client")
+        return cls(settings, vertex=True)
+
+    @classmethod
+    def from_vertex(cls, *, project: str, location: str = "us-central1") -> "GeminiClient":
+        """Build a Vertex-routed client with explicit project/location.
+
+        Bypasses the `.env` requirement — useful for scripts that want to
+        target a one-off project (e.g. a test project) without mutating the
+        shared config.
+        """
+        settings = Settings.load()
+        return cls(settings, vertex=True, vertex_project=project, vertex_location=location)
+
+    @classmethod
+    def for_text(cls) -> "GeminiClient":
+        """Factory for the text generation pipelines (shorts, blogs, outreach).
+
+        Honors `USE_VERTEX_FOR_TEXT=true`: if set, routes through Vertex. This
+        matters for production because Vertex has no free-tier caps on Flash
+        (20 req/day on AI Studio, unlimited-with-billing on Vertex) and
+        lets text share the same billing surface as Imagen.
+        """
+        settings = Settings.load()
+        if settings.use_vertex_for_text:
+            settings.require_vertex(purpose="text generation")
+            return cls(settings, vertex=True)
+        return cls(settings)
+
+    @classmethod
+    def for_images(cls) -> "GeminiClient":
+        """Factory the image renderer calls by default.
+
+        Honors `USE_VERTEX_FOR_IMAGES=true`: if set, routes through Vertex
+        (and requires VERTEX_PROJECT). Otherwise, the AI Studio client.
+        """
+        settings = Settings.load()
+        if settings.use_vertex_for_images:
+            settings.require_vertex(purpose="image rendering")
+            return cls(settings, vertex=True)
+        return cls(settings)
 
     @property
     def reasoning_model(self) -> str:
@@ -57,6 +137,22 @@ class GeminiClient:
     def raw_client(self) -> genai.Client:
         """Underlying google-genai Client (for image/video generation paths)."""
         return self._client
+
+    @property
+    def is_vertex(self) -> bool:
+        """True if this client is routed through Vertex AI."""
+        return self._is_vertex
+
+    @property
+    def routing_label(self) -> str:
+        """Human-readable routing label for logs and CLI output."""
+        if self._is_vertex:
+            return (
+                f"Vertex AI (project={self._settings.vertex_project}, "
+                f"location={self._settings.vertex_location}, "
+                f"auth={self._settings.vertex_auth_mode})"
+            )
+        return "AI Studio (Gemini Developer API)"
 
     def generate(
         self,

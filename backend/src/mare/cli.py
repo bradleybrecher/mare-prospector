@@ -19,6 +19,12 @@ from rich.table import Table
 
 from mare.config import Settings
 from mare.content.brief import ContentBrief
+from mare.content.channels import (
+    CHANNELS,
+    DEFAULT_CHANNEL_ID,
+    channels_summary,
+    get_channel,
+)
 from mare.content.image_prompts import generate_image_prompts
 from mare.content.image_renderer import IMAGEN_TIERS, render_image_prompts
 from mare.content.pipeline import ContentPipeline
@@ -46,6 +52,31 @@ app.add_typer(workflow_app, name="workflow")
 app.add_typer(review_app, name="review")
 
 console = Console()
+
+
+@app.command()
+def serve(
+    host: str = typer.Option("127.0.0.1", "--host", help="Bind address."),
+    port: int = typer.Option(8000, "--port", help="Port for the HTTP API."),
+    reload: bool = typer.Option(
+        False, "--reload", help="Auto-reload on code change (dev only)."
+    ),
+) -> None:
+    """Run the MaRe Studio HTTP API (for the Next.js dashboard)."""
+    import uvicorn  # local import: heavy, only needed when actually serving.
+
+    console.print(
+        Panel(
+            f"MaRe Studio API starting on [bold]http://{host}:{port}[/bold]\n"
+            f"• Health:   GET  /api/health\n"
+            f"• Channels: GET  /api/channels\n"
+            f"• Render:   POST /api/render  (Server-Sent Events stream)\n\n"
+            f"The Next.js dashboard at [cyan]frontend/[/cyan] connects to this.",
+            title="mare serve",
+            border_style="cyan",
+        )
+    )
+    uvicorn.run("mare.api:app", host=host, port=port, reload=reload)
 
 
 @app.command()
@@ -258,13 +289,36 @@ def content_render_images(
     audience: str = typer.Option("high_end_client", "--audience"),
     proof: str | None = typer.Option(None, "--proof"),
     cta: str | None = typer.Option(None, "--cta"),
+    channel: str = typer.Option(
+        DEFAULT_CHANNEL_ID,
+        "--channel",
+        help=(
+            "Distribution channel — frames + crops are tuned for this target. "
+            f"Options: {', '.join(c.id for c in CHANNELS)}."
+        ),
+    ),
     tier: str = typer.Option(
         "standard",
         "--tier",
         help=f"Imagen tier: fast | standard | ultra. Options: {', '.join(IMAGEN_TIERS)}.",
     ),
+    use_vertex: bool = typer.Option(
+        False,
+        "--use-vertex/--use-ai-studio",
+        help=(
+            "Route Imagen through Vertex AI (requires VERTEX_PROJECT + "
+            "`gcloud auth application-default login`). Overrides the "
+            "USE_VERTEX_FOR_IMAGES env setting for this one call."
+        ),
+    ),
 ) -> None:
-    """End-to-end: Short + per-beat prompts + real rendered images via Imagen 4."""
+    """End-to-end: Short + per-beat prompts + real rendered images via Imagen 4.
+
+    Mobile-first by default (`--channel youtube_short` = 9:16). Switch to
+    `--channel ig_feed` for 4:5 portrait, `--channel blog_hero` for blog
+    heroes that serve 9:16 on mobile and 16:9 to desktop, etc.
+    """
+    ch = get_channel(channel)
     brief = ContentBrief(
         topic=topic,
         audience=audience,  # type: ignore[arg-type]
@@ -272,24 +326,86 @@ def content_render_images(
         call_to_action=cta,
     )
     script = generate_short_script(brief)
-    prompts = generate_image_prompts(script)
+    prompts = generate_image_prompts(script, channel=ch)
 
     settings = Settings.load()
     slug = _slugify(topic)
-    out_dir = settings.artifact_dir / "content" / "shorts" / slug
+    out_dir = settings.artifact_dir / "content" / "shorts" / slug / ch.id
     out_dir.mkdir(parents=True, exist_ok=True)
     (out_dir / "script.md").write_text(script.to_markdown())
     (out_dir / "image_prompts.md").write_text(prompts.to_markdown())
 
+    # Explicit --use-vertex overrides the env flag; otherwise honor USE_VERTEX_FOR_IMAGES.
+    if use_vertex:
+        settings.require_vertex(purpose="image rendering")
+        images_client = GeminiClient(settings, vertex=True)
+    else:
+        images_client = GeminiClient.for_images()
+
     images_dir = out_dir / "images"
-    rendered = render_image_prompts(prompts, out_dir=images_dir, tier=tier)
+    rendered = render_image_prompts(
+        prompts, out_dir=images_dir, tier=tier, channel=ch, client=images_client,
+    )
+    routing = images_client.routing_label
     console.print(
         Panel(
             f"Wrote [bold]{out_dir}[/bold]\n"
-            f"• script.md\n• image_prompts.md\n• images/ ({len(rendered.beats)} frame{'s' if len(rendered.beats) != 1 else ''})\n\n"
+            f"Channel: [bold]{ch.label}[/bold] "
+            f"(target {ch.target_aspect}, render {ch.render_aspect}, "
+            f"{'mobile-first' if ch.is_mobile_first else 'print'})\n"
+            f"Routing: [bold]{routing}[/bold]\n"
+            f"• script.md\n• image_prompts.md\n"
+            f"• images/ ({len(rendered.beats)} frame{'s' if len(rendered.beats) != 1 else ''})\n\n"
             f"{rendered.summary()}",
             title="Short + rendered images",
             border_style="green",
+        )
+    )
+
+
+@content_app.command("vertex-status")
+def content_vertex_status() -> None:
+    """Show how Vertex AI routing is currently configured."""
+    settings = Settings.load()
+    creds = settings.google_application_credentials
+    if creds is not None:
+        creds_display = (
+            f"[green]{creds}[/green]"
+            if creds.exists()
+            else f"[red]{creds} (missing!)[/red]"
+        )
+    else:
+        creds_display = "[dim](not set — will use gcloud ADC)[/dim]"
+    lines = [
+        f"[bold]Vertex project:[/bold] {settings.vertex_project or '[red](not set)[/red]'}",
+        f"[bold]Vertex location:[/bold] {settings.vertex_location}",
+        f"[bold]Service account JSON:[/bold] {creds_display}",
+        f"[bold]Text via Vertex:[/bold] "
+        + ("[green]on[/green]" if settings.use_vertex_for_text else "[dim]off[/dim]"),
+        f"[bold]Images via Vertex:[/bold] "
+        + ("[green]on[/green]" if settings.use_vertex_for_images else "[dim]off[/dim]"),
+    ]
+    if not settings.vertex_project:
+        lines.append("")
+        lines.append(
+            "[yellow]To enable:[/yellow] add [bold]VERTEX_PROJECT=<id>[/bold] to .env, run "
+            "[cyan]gcloud auth application-default login[/cyan] once, then "
+            "flip USE_VERTEX_FOR_IMAGES=true and/or USE_VERTEX_FOR_TEXT=true."
+        )
+        lines.append(
+            "[yellow]Probe:[/yellow] [cyan]python backend/scripts/probe_vertex.py[/cyan]"
+        )
+    console.print(Panel("\n".join(lines), title="Vertex AI routing", border_style="cyan"))
+
+
+@content_app.command("channels")
+def content_channels() -> None:
+    """List every distribution channel MaRe renders for (mobile-first first)."""
+    console.print(
+        Panel(
+            channels_summary(),
+            title="MaRe channels — mobile-first matrix",
+            border_style="cyan",
         )
     )
 

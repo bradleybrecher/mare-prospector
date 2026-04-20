@@ -69,7 +69,7 @@ def generate_social_caption(
     platform: Platform = "instagram",
     client: GeminiClient | None = None,
 ) -> SocialPost:
-    client = client or GeminiClient.from_env()
+    client = client or GeminiClient.for_text()
     result = client.generate(
         SOCIAL_TASK.format(platform=platform, brief_context=brief.as_prompt_context()),
         temperature=0.85,

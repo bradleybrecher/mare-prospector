@@ -1,0 +1,51 @@
+/* Google Fonts: Playfair Display (display) + Manrope (UI/body).
+   Loaded from Google Fonts to match the brand kit's specified typefaces.
+   MUST appear before any style declarations per CSS spec. */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500&family=Manrope:wght@300;400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --mare-light: #e2e2de;
+  --mare-key: #296167;
+  --mare-brown: #653d24;
+  --mare-extra-dark: #2a2420;
+}
+
+html,
+body {
+  background: var(--mare-light);
+  color: var(--mare-extra-dark);
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  letter-spacing: -0.04em;
+  line-height: 1.36;
+}
+
+/* Smooth scroll + native font smoothing for the editorial feel. */
+html {
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Utility: subtle linen-like texture on the body, applied only to the hero
+   band. Keeps the editorial photography aesthetic without being gimmicky. */
+.bg-linen {
+  background-image:
+    radial-gradient(ellipse at top, rgba(41, 97, 103, 0.06), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(101, 61, 36, 0.04), transparent 60%);
+}
+
+/* Thin, etched rule used to separate sections — matches the style guide's
+   preference for quiet horizontal dividers rather than bold lines. */
+.rule-etched {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(42, 36, 32, 0.24),
+    transparent
+  );
+  height: 1px;
+}

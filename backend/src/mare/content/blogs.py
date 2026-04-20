@@ -113,7 +113,7 @@ class BlogDraft:
 
 
 def generate_blog(brief: ContentBrief, client: GeminiClient | None = None) -> BlogDraft:
-    client = client or GeminiClient.from_env()
+    client = client or GeminiClient.for_text()
     result = client.generate(
         BLOG_TASK.format(
             brief_context=brief.as_prompt_context(),

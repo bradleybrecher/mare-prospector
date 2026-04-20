@@ -89,7 +89,7 @@ class ShortScript:
 
 
 def generate_short_script(brief: ContentBrief, client: GeminiClient | None = None) -> ShortScript:
-    client = client or GeminiClient.from_env()
+    client = client or GeminiClient.for_text()
     result = client.generate(
         SHORT_TASK.format(
             brief_context=brief.as_prompt_context(),

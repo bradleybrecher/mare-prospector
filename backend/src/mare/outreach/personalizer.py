@@ -62,7 +62,7 @@ class OutreachDrafter:
     """Generates email + DM drafts for a `SalonProspect`."""
 
     def __init__(self, client: GeminiClient | None = None):
-        self._client = client or GeminiClient.from_env()
+        self._client = client or GeminiClient.for_text()
 
     def draft(
         self,

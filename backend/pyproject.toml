@@ -18,6 +18,10 @@ dependencies = [
     # Stateful HITL workflows: durable draft → review → revise → approve → publish.
     "langgraph>=0.2.50",
     "langgraph-checkpoint-sqlite>=2.0.0",
+    # FastAPI service for the Next.js dashboard.
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "sse-starlette>=2.1",
 ]
 
 [project.optional-dependencies]

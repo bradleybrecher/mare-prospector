@@ -4,6 +4,15 @@
 .env.*.local
 *.pem
 *.key
+# Service account JSON keys (Google Cloud / Vertex AI)
+# Ignore everything in backend/secrets/ EXCEPT the README explaining the folder.
+backend/secrets/*
+!backend/secrets/README.md
+!backend/secrets/.gitkeep
+*-sa.json
+*-service-account.json
+*-credentials.json
+google_photos_token.json
 
 # --- Python ---
 __pycache__/
@@ -48,3 +57,7 @@ artifacts/
 *.log
 logs/
 .cache/
+
+# --- Brand Kit source assets (tracked in Drive; transcribed into mare.brand.identity) ---
+Brand Kit/MaRe Brand Guidelines.pdf
+Brand Kit/Copy of 🎨 Style Guide.pdf

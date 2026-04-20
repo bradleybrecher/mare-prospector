@@ -1,12 +1,17 @@
 """MaRe brand voice rules and the master system prompt.
 
-Calibrated from the brief + the live website at https://mareheadspa.com.
-Replace or refine when the official tone guide from the MaRe team arrives.
+Grounded in the official MaRe Brand Kit (see `mare.brand.identity`) plus the
+operational guidance we've developed on top of it: red-flag words, pillar
+vocabulary, salon lingo, product naming, and format defaults.
+
+Edit here or in `identity` — every Gemini call in the project pulls from this
+prompt, so brand drift is structurally impossible.
 """
 
 from __future__ import annotations
 
 from mare.brand.ai_red_flags import AI_ISH_PHRASES, AI_ISH_WORDS, STRUCTURAL_TELLS
+from mare.brand.identity import MOBILE_FIRST_DOCTRINE, identity_prompt_block
 from mare.brand.products import product_brief_for_prompt
 from mare.brand.salon_lingo import SALON_LINGO
 from mare.brand.vocabulary import VOCABULARY_PROMPT_GUIDANCE
@@ -59,7 +64,9 @@ BRAND_SYSTEM_PROMPT = f"""You are the in-house copywriter for MaRe Head Spa Syst
 a Miami-based head-spa platform. MaRe sells B2B to salons, spas, clinics, hotels, and
 wellness centers, and D2C to wellness enthusiasts.
 
-IDENTITY
+{identity_prompt_block()}
+
+OPERATIONAL IDENTITY
 {VOICE_RULES["identity"]}
 
 POSITIONING LINE (never paste verbatim; let it guide tone)
@@ -69,7 +76,9 @@ POSITIONING LINE (never paste verbatim; let it guide tone)
 
 {product_brief_for_prompt()}
 
-TONE
+{MOBILE_FIRST_DOCTRINE}
+
+OPERATIONAL TONE NOTES (build on top of the brand-kit tone matrix above)
 - {VOICE_RULES["tone"][0]}
 - {VOICE_RULES["tone"][1]}
 - {VOICE_RULES["tone"][2]}

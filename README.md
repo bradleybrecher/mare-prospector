@@ -22,12 +22,16 @@ dominance" are descoped for this iteration but the architecture leaves room.)*
 ```
 .
 ├── .env.example              # Copy to .env and fill GEMINI_API_KEY
+├── Brand Kit/                # Official MaRe brand-kit PDFs (gitignored)
 ├── backend/                  # Python — Gemini, agents, pipelines
 │   ├── pyproject.toml
 │   └── src/mare/
-│       ├── brand/            # Voice rules, salon lingo, AI-red-flags
-│       ├── outreach/         # Pillar 2
-│       ├── content/          # Pillar 3
+│       ├── brand/            # identity (palette/typography/persona/tone),
+│       │                     # voice, vocabulary, salon lingo, AI-red-flags
+│       ├── outreach/         # Pillar 2 — email, LinkedIn DM, postcard
+│       ├── content/          # Pillar 3 — shorts, blogs, social, image
+│       │                     # prompts, Imagen 4 renderer, channel matrix
+│       ├── workflow/         # LangGraph HITL state machine + SQLite store
 │       ├── gemini_client.py  # Thin wrapper around google-genai
 │       ├── config.py         # Loads .env
 │       └── cli.py            # `python -m mare ...`
@@ -126,10 +130,14 @@ timestamp, iterations). Your dispatcher/sender picks up from there.
 ## Design principles
 
 1. **Brand is a first-class citizen.** Every prompt pulls from `mare.brand` —
-   tone rules, salon lingo, canonical product names (MaRe Capsule, MaRe Eye,
-   MaRe x Philip Martin's...), pillar vocabulary (Systematic / Luxury /
+   the official brand-kit identity (`mare.brand.identity`: essence, persona,
+   12-trait tone matrix, full color palette with hex codes, typography,
+   logo rules), tone rules, salon lingo, canonical product names (MaRe Capsule,
+   MaRe Eye, MaRe x Philip Martin's...), pillar vocabulary (Systematic / Luxury /
    Natural-Organic / Wellness), and an AI-ish blacklist (no "delve", no em-dashes,
    no "in today's fast-paced world"). Change these once, every generator inherits.
+   The source-of-truth PDFs live in `Brand Kit/`; `mare.brand.identity` is a
+   verbatim transcription.
 2. **Humans review, agents draft.** Outputs land in `artifacts/` for a human
    to polish before send/publish. Nothing auto-sends.
 3. **Structured output by default.** Every generator declares a Pydantic schema
@@ -143,6 +151,97 @@ timestamp, iterations). Your dispatcher/sender picks up from there.
    topical facets, and FAQPage JSON-LD. These are the dials that decide whether
    ChatGPT Search, Google SGE, and Perplexity cite MaRe for *"dandruff solutions"*
    or *"luxury head spa near me"*.
+6. **Mobile-first across every channel.** MaRe content is consumed on a phone
+   first, a desktop second, a printed piece third — and the pipeline enforces
+   that hierarchy at the frame level. `mare.content.channels` is the registry
+   of every distribution surface (YouTube Shorts, IG Reel/Story/Feed/Carousel,
+   TikTok, LinkedIn, blog hero, email hero, direct-mail postcard) with its
+   target aspect, Imagen-native render aspect, safe-area rule, and platform
+   notes. Pick a channel with `--channel ig_feed` (or `blog_hero`, `tiktok`,
+   etc.) and the image-prompt generator + Imagen 4 renderer + downstream
+   crop guidance all tune to it.
+
+## Mobile-first channel matrix
+
+Every digital asset is framed for a thumb-held screen first. Imagen 4 can
+natively render `1:1`, `3:4`, `4:3`, `9:16`, `16:9` — channels whose target
+aspect isn't in that set (e.g. IG Feed `4:5`, postcard `5:7`) render at the
+nearest native aspect and a downstream crop brings them home without
+amputating the subject.
+
+| Channel id | Label | Target | Imagen renders at | Mobile-first |
+|---|---|---|---|---|
+| `youtube_short` | YouTube Shorts | 9:16 | 9:16 | ✓ |
+| `ig_reel` | Instagram Reels | 9:16 | 9:16 | ✓ |
+| `ig_story` | Instagram Stories | 9:16 | 9:16 | ✓ |
+| `tiktok` | TikTok | 9:16 | 9:16 | ✓ |
+| `ig_feed` | Instagram Feed post | 4:5 | 3:4 + crop | ✓ |
+| `ig_carousel` | Instagram Carousel | 4:5 | 3:4 + crop | ✓ |
+| `linkedin_post` | LinkedIn post | 4:5 | 3:4 + crop | ✓ |
+| `blog_hero` | Blog hero image | 16:9 | 9:16 + crop | ✓ (mobile is default, desktop is a derivative) |
+| `email_hero` | Email hero | 4:5 | 3:4 + crop | ✓ |
+| `postcard_front` | Direct-mail postcard | 5:7 | 3:4 + crop | print |
+
+Run `python -m mare content channels` to see the matrix any time. Change
+frames or safe areas in `backend/src/mare/content/channels.py` and every
+generator inherits the change automatically.
+
+```bash
+# Render a Short as 9:16 (the default)
+python -m mare content render-images --topic "A 30-second mirror test for scalp health"
+
+# Same Short, re-framed for an Instagram Feed post
+python -m mare content render-images --topic "A 30-second mirror test for scalp health" \
+  --channel ig_feed
+
+# Blog hero — mobile 9:16 is the master; 16:9 is a crop served to desktop only
+python -m mare content render-images --topic "How to read your scalp" \
+  --channel blog_hero --tier ultra
+```
+
+## How the human-in-the-loop gate works
+
+Yes — the HITL gate is triggered by **LangGraph's `interrupt()`** primitive.
+The workflow is a state machine with a durable SQLite checkpointer, so a
+draft can sit for minutes, hours, or days waiting for a human without
+losing context.
+
+```
+           submit-short / submit-blog / submit-outreach / submit-postcard
+                                    │
+                                    ▼
+                                 ┌─────┐
+                                 │draft│  (Gemini 2.5 Pro, Flash fallback)
+                                 └──┬──┘
+                                    ▼
+                              ┌───────────┐
+                              │ auto_lint │  (AI-ish red flags, vocab coverage,
+                              └──────┬────┘   tricolon / em-dash counts)
+                                     ▼
+                          ┌──────────────────────┐
+                          │    human_review      │  ← LangGraph interrupt()
+                          │    (PAUSES HERE)     │  State persists to SQLite.
+                          └──────────┬───────────┘  `mare review pending` lists it.
+                                     │
+      ┌──────────────────────────────┼────────────────────────────┐
+      │                              │                            │
+      ▼                              ▼                            ▼
+ `review approve`              `review revise`              `review reject`
+   (+ reviewer)               (+ notes → re-prompt)         (+ reason)
+      │                              │                            │
+      ▼                              ▼                            ▼
+   publish                 back to draft (iteration++)       force_reject
+  artifacts/verified/          up to 3 revision loops             END
+  with YAML frontmatter
+  (mare_verified: true)
+```
+
+Under the hood: `human_review_node` calls `interrupt({...})` which snapshots
+the full graph state to the SQLite checkpointer and yields. The `mare review
+approve/revise/reject` commands resume the graph with `Command(resume=...)`
+carrying the reviewer's decision, so the graph picks up exactly where it
+paused and routes via `route_after_review`. Nothing is "MaRe Verified"
+without a human explicitly approving it.
 
 ## Model configuration
 
@@ -157,6 +256,64 @@ MaRe runs on Gemini 2.5 Pro by default, with automatic fallback if Pro is unavai
 **Billing note:** Free-tier API keys get **0 daily Pro requests**. Enable billing
 on the Google Cloud project tied to your API key to actually use 2.5 Pro. Until
 you do, every call silently falls back to Flash.
+
+## Vertex AI routing (recommended for production rendering)
+
+AI Studio is the fastest path to draft text, but its free tier caps paid
+Imagen at a low quota. **Vertex AI** is the same models through Google
+Cloud billing — separate quota pool, no free-tier ceiling, and a production
+path for image + text rendering at scale.
+
+MaRe supports both backends from the same codebase. Text generation stays on
+AI Studio (cheap, fast, enough quota once you enable billing). Image and video
+rendering can be flipped to Vertex per-call (`--use-vertex` on
+`mare content render-images`) or globally (`USE_VERTEX_FOR_IMAGES=true`).
+
+### One-time setup
+
+1. **Pick or create a GCP project** with billing attached. The project id is
+   what goes into `VERTEX_PROJECT` below.
+2. **Enable the Vertex AI API** on that project:
+
+   ```bash
+   gcloud services enable aiplatform.googleapis.com --project <your-project-id>
+   ```
+
+3. **Authenticate your machine** with Application Default Credentials (one-time,
+   opens a browser):
+
+   ```bash
+   gcloud auth application-default login
+   ```
+
+4. **Add to `.env`:**
+
+   ```
+   VERTEX_PROJECT=your-gcp-project-id
+   VERTEX_LOCATION=us-central1
+   USE_VERTEX_FOR_IMAGES=true          # image rendering via Vertex
+   USE_VERTEX_FOR_TEXT=true            # text generation via Vertex
+   ```
+
+5. **Probe it** (costs ~$0.02 — one fast Imagen render):
+
+   ```bash
+   python backend/scripts/probe_vertex.py
+   ```
+
+   You want to see `=== SUCCESS === Wrote artifacts/_probe/vertex_probe.png`.
+   Any other verdict prints the exact next command to run.
+
+### What flips when
+
+| Env flag | Effect |
+| --- | --- |
+| `USE_VERTEX_FOR_IMAGES=true` | `mare content render-images` routes Imagen 4 through Vertex. CLI can override per-call with `--use-ai-studio` / `--use-vertex`. |
+| `USE_VERTEX_FOR_TEXT=true` | All text generators (shorts, blogs, social, outreach, postcards) route through Vertex. |
+| (All off) | Everything stays on the AI Studio key — zero setup, free-tier limits apply. |
+
+Run `python -m mare content vertex-status` any time to see the current routing
+at a glance.
 
 ## Status
 
@@ -174,6 +331,8 @@ you do, every call silently falls back to Flash.
 - [x] Durable SQLite state — drafts wait for review across sessions
 - [x] Revision loop with reviewer notes baked back into the regeneration prompt
 - [x] "MaRe Verified" stamped artifacts with YAML frontmatter (reviewer, ts, iters)
+- [x] Official Brand Kit transcribed into `mare.brand.identity` (palette, typography, tone matrix, logo rules)
+- [x] Mobile-first channel matrix (`mare.content.channels`) wired into image prompts + Imagen 4 renderer + CLI
 - [ ] Pillar 1 — Revenue-verified salon prospecting data source
 - [ ] Pillar 4 — AI-search rank tracker (is MaRe actually being cited?)
 - [ ] Real salon social-highlight ingestion (currently manual via `--highlight`)
